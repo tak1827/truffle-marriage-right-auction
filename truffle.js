@@ -25,12 +25,20 @@ module.exports = {
       gas: 60000000,
     },
 
-    geth: {
+    localgeth: {
       host: "127.0.0.1",
       port: 8545,
-      network_id: 15, // Match any network id
+      network_id: 15,
       gasPrice: 1,
       gas: 60000000,
+    },
+
+    rinkeby: {
+      host: "localhost",
+      port: 8545,
+      network_id: "4", // Rinkeby ID 4
+      // from: "", // account from which to deploy
+      gas: 6500000
     }
   }
 };
@@ -38,3 +46,4 @@ module.exports = {
 // 6174414
 // 60000000
 // 268435455
+
