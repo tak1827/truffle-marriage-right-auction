@@ -14,11 +14,4 @@ contract MRAToken is PausableToken {
         balances[msg.sender] = INITIAL_SUPPLY;
     }
     
-    /*
-     Kill this smart contract.
-    */
-    function kill () onlyOwner whenPaused public {
-        selfdestruct (owner);
-    }
-    
 }

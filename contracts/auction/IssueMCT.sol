@@ -10,11 +10,11 @@ import "openzeppelin-solidity/contracts/lifecycle/Pausable.sol";
 contract IssueMCT is Ownable, Pausable, Msg {
 
     struct Marriage {
-        
+        // Token id assigned when issue
         uint256 id;
-        
+        // Auction seller id
         uint256 seller;
-        
+        // Auction winnr id
         uint256 winner;
     }
 
@@ -33,17 +33,34 @@ contract IssueMCT is Ownable, Pausable, Msg {
 
     event AuctionERC721TokenIssued(uint256 auctionId, uint256 tokenId);
 
+    /**
+     * @param _user UserAuction contract address
+     * @param _erc721 MRAToken address
+     * @param _auction AuctionAction contract address
+     */
     constructor(address _user, address _erc721, address _auction) public {
         userContract = UserBase(_user);
         erc721 = MarrageCertificationToken(_erc721);
         auction = AuctionBase(_auction);
     }
 
+    /**
+     * @dev Get token
+     * @dev Reverts if token don't eist
+     * @param _tokenId token id
+     */
     function getMarriageTokenIfExist(uint256 _tokenId) internal view returns(Marriage) {
         require(marriages[ _tokenId - MARRIAGE_TOKEN_ID_OFFSET ].id == _tokenId, INVAL_TOKEN_ID);
         return marriages[ _tokenId - MARRIAGE_TOKEN_ID_OFFSET ];
     }
 
+    /**
+     * @dev Issue token
+     * @dev Reverts if auction winner have not yet choosen
+     * @dev Reverts if user is not auction seller
+     * @param _auctionId auction id
+     * @return assinged token id
+     */
     function issueERC721Token(uint256 _auctionId)
         external
         whenNotPaused
@@ -72,14 +89,20 @@ contract IssueMCT is Ownable, Pausable, Msg {
         return newTokenId;
     }
 
+    /**
+     * @dev Mint token
+     * @param _to reciver address
+     * @param _tokenId token id
+     * @param _userId send user id
+     */
     function mintERC721(address _to, uint256 _tokenId, uint256 _userId) internal {
         userIdToMarriageTokenId[_userId] = _tokenId;
         erc721.mint(_to, _tokenId);
     }
-
-    /*
-     Kill this smart contract.
-    */
+    
+    /**
+     * @dev Kill this smart contract.
+     */
     function kill () onlyOwner whenPaused public {
         selfdestruct (owner);
     }

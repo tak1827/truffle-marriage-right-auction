@@ -9,77 +9,56 @@ import "openzeppelin-solidity/contracts/token/ERC20/ERC20.sol";
 contract AuctionBase is Ownable, Msg {
     
     struct Auction {
-        
+        // Auction id assinged when creation
         uint256 id;
-
+        // User id of seller
         uint256 seller;
-        
+        // Current auction stage
         Stages stage;
-        
+        // End time of application
         uint64 applicantEndTime;
-        
+        // End time of bidding
         uint64 biddingEndTime;
-        
+        // User id of winner
         uint256 winner;
-        
+        // Time created
         uint64 createdAt;
-        
+        // Time updated
         uint64 updastedAt;
-        
+        // Applications user id
         uint256[] applicants;
-        
+        // Bidders use id
         uint256[] bidders;
-        
+        // Bidding amount map to user id
         mapping(uint256 => uint128) amount;
-
+        // Current remaining escrowd erc20 token map to user id
         mapping(uint256 => uint128) escrowedERC20;
     }
-    
-    struct Marriage {
-        
-        uint256 id;
-        
-        uint256 seller;
-        
-        uint256 winner;
-    }
-    
-    /*
-     *  Enums
+
+    /**
+     * Auction each stage
      */
     enum Stages {
-        Default,
-        Application,
-        Bidding,
-        WinnerChoosen,
-        Cancel
+        Default,         // Skip this stage when auction was successfuly created
+        Application,     // First stage of auction
+        Bidding,         // Start bidding, after selected bidders.
+        WinnerChoosen,   // The last stage of auction. Winner is choosen.
+        Cancel           // Seller can cannel auction only at application stage.
     }
     
     UserBase public userContract;
     
     ERC20 public erc20;
     
-    // MarrageCertificationToken public erc721;
-    
     uint256[] auctionIds;
-    
-    // Marriage[] marriages;
     
     uint64 constant MIN_AUCTION_DURATION = 1;
     
     uint8 constant AUCTION_ID_OFFSET = 100;
     
-    // uint8 constant MARRIAGE_TOKEN_ID_OFFSET = 100;
-    
     mapping (uint256 => Auction) public idToAuction;
     
     mapping (uint256 => uint256) public userIdToAuctionId;
-    
-    // mapping (uint256 => uint128) internal userIdToEscrowedERC20;
-    
-    // mapping (uint256 => address) internal userIdToAddress;
-    
-    // mapping (uint256 => uint256) public userIdToMarriageTokenId;
     
     modifier auctionExist(uint256 _auctionId) {
         require(idToAuction[_auctionId].id == _auctionId, NO_AUCTION);
@@ -103,37 +82,61 @@ contract AuctionBase is Ownable, Msg {
         _;
     }
     
+    /**
+     * @param _userConstract UserAuction contract address
+     * @param _erc20 MRAToken address
+     */
     constructor(address _userConstract, address _erc20) internal {
         userContract = UserBase(_userConstract);
         erc20 = ERC20(_erc20);
-        // erc721 = MarrageCertificationToken(_erc721);
     }
     
+    /**
+     * @dev Return msg sender having auctuion id
+     * @dev Reverts if user don't exist
+     * @return Msg sender having auctuion id. If use don't have auction id, return '0'
+     */
     function havingAuctionId() external view returns(uint256) {
         uint256 userId = userContract.getUserIdIfExist(msg.sender);
         return userIdToAuctionId[userId] != 0 ? userIdToAuctionId[userId] : 0;
     }
     
-    // function havingMarriageTokenId() external view returns(uint256) {
-    //     uint256 userId = userContract.getUserIdIfExist(msg.sender);
-    //     return userIdToMarriageTokenId[userId] != 0 ? userIdToMarriageTokenId[userId] : 0;
-    // }
-
-    
+    /**
+     * @dev Check if user is applied
+     * @param _auctionId auction id
+     * @param _userId user id
+     * @return True, if user is applied
+     */
     function isApplied(uint256 _auctionId, uint256 _userId) internal view returns(bool) {
         uint256[] storage applicants = idToAuction[_auctionId].applicants;
         return UtilLib.hasUintArrayUintVal(applicants, _userId) ? true : false;
     }
     
+    /**
+     * @dev Check if user is bidder
+     * @param _auctionId auction id
+     * @param _userId user id
+     * @return True, if user is bidder
+     */
     function isBidder(uint256 _auctionId, uint256 _userId) internal view returns(bool) {
         uint256[] storage bidders = idToAuction[_auctionId].bidders;
         return UtilLib.hasUintArrayUintVal(bidders, _userId) ? true : false;
     }
     
+    /**
+     * @dev Check if user have auction
+     * @param _seller user id
+     * @return True, if user have auction
+     */
     function hasAuction(uint256 _seller) internal view returns(bool) {
         return userIdToAuctionId[_seller] == 0 ? false : true;
     }
     
+    /**
+     * @dev Get applications
+     * @param _auctionId auction id
+     * @return applications
+     */
     function getApplicants(uint256 _auctionId) 
         external 
         view 
@@ -143,6 +146,11 @@ contract AuctionBase is Ownable, Msg {
         return idToAuction[_auctionId].applicants;
     }
     
+    /**
+     * @dev Get application end time
+     * @param _auctionId auction id
+     * @return Application end time
+     */
     function getApplicantEnd(uint256 _auctionId) 
         external 
         view 
@@ -152,6 +160,11 @@ contract AuctionBase is Ownable, Msg {
         return idToAuction[_auctionId].applicantEndTime;
     }
     
+    /**
+     * @dev Get bidding end time
+     * @param _auctionId auction id
+     * @return Bidding end time
+     */
     function getBiddingEnd(uint256 _auctionId) 
         external 
         view 
@@ -161,6 +174,11 @@ contract AuctionBase is Ownable, Msg {
         return idToAuction[_auctionId].biddingEndTime;
     }
     
+    /**
+     * @dev Get bidders
+     * @param _auctionId auction id
+     * @return bidders
+     */
     function getBidders(uint256 _auctionId) 
         external 
         view 
@@ -170,6 +188,12 @@ contract AuctionBase is Ownable, Msg {
         return idToAuction[_auctionId].bidders;
     }
     
+    /**
+     * @dev Get bid amount
+     * @param _auctionId auction id
+     * @param _bidder bidder id
+     * @return bid amount
+     */
     function getBiddedAmount(uint256 _auctionId, uint256 _bidder) 
         external 
         view 
@@ -180,6 +204,12 @@ contract AuctionBase is Ownable, Msg {
         return idToAuction[_auctionId].amount[_bidder];
     }
     
+    /**
+     * @dev Get winner
+     * @dev Reverts if winner don't exist
+     * @param _auctionId auction id
+     * @return winner
+     */
     function getWinner(uint256 _auctionId)
         external
         view
@@ -190,6 +220,12 @@ contract AuctionBase is Ownable, Msg {
         return idToAuction[_auctionId].winner;
     }
 
+    /**
+     * @dev Get seller
+     * @dev Reverts if seller don't exist
+     * @param _auctionId auction id
+     * @return seller
+     */
     function getSeller(uint256 _auctionId)
         external
         view
@@ -199,23 +235,5 @@ contract AuctionBase is Ownable, Msg {
         require(idToAuction[_auctionId].seller != 0, NOT_SELLER);
         return idToAuction[_auctionId].seller;
     }
-    
-    // function getMarriageTokenIfExist(uint256 _tokenId) internal view returns(Marriage) {
-    //     require(marriages[ _tokenId - MARRIAGE_TOKEN_ID_OFFSET ].id == _tokenId, INVAL_TOKEN_ID);
-    //     return marriages[ _tokenId - MARRIAGE_TOKEN_ID_OFFSET ];
-    // }
-    
-    // function escrowERC20(address _from, uint128 _amount, uint256 _userId) internal {
-    //     userIdToEscrowedERC20[_userId] += _amount;
-    //     // userIdToAddress[_userId] = _from;
-    //     erc20.transferFrom(_from, address(this), _amount);
-    // }
-    
-    
-    // function mintERC721(address _to, uint256 _tokenId) internal {
-    //     uint256 userId = userContract.getUserIdIfExist(_to);
-    //     userIdToMarriageTokenId[userId] = _tokenId;
-    //     erc721.mint(_to, _tokenId);
-    // }
 
 }

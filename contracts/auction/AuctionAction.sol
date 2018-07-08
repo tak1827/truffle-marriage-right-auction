@@ -23,13 +23,16 @@ contract AuctionAction is AuctionBase, Pausable {
     
     event AuctionWinnerChoosen(uint256 auctionId, uint256 winner);
     
-    // event AuctionIssueApproved(uint256 auctionId, uint256 userId);
-    
-    // event AuctionERC721TokenIssued(uint256 auctionId, uint256 tokenId);
-    
     constructor(address _userConstract, address _erc20) 
         public AuctionBase(_userConstract, _erc20) {}
     
+    /**
+     * @dev Create auction
+     * @dev Reverts if duration is nunder 'MIN_AUCTION_DURATION'
+     * @dev Reverts if user don't exist or already haveing auction
+     * @param _duration application term
+     * @return assignd auction id
+     */
     function createAuction(uint64 _duration) external whenNotPaused returns(uint256) {
         
         require(_duration >= MIN_AUCTION_DURATION, TOO_SMALL_DURATION);
@@ -57,6 +60,13 @@ contract AuctionAction is AuctionBase, Pausable {
         return newAuctionId;
     }
     
+
+    /**
+     * @dev Apply to auction
+     * @dev Reverts if auction is not application stage or out of application term
+     * @dev Reverts if user or auction don't exist
+     * @param _auctionId application id
+     */
     function apply(uint256 _auctionId) 
         external 
         whenNotPaused
@@ -74,6 +84,13 @@ contract AuctionAction is AuctionBase, Pausable {
         emit AuctionApplied(_auctionId, userId);
     }
     
+    /**
+     * @dev Apply to auction
+     * @dev Reverts if auction is not application stage
+     * @dev Reverts if applicant don't exist or already selected
+     * @param _auctionId application id
+     * @param _applicantId applicant id
+     */
     function selectBidders(uint256 _auctionId, uint256 _applicantId) 
         external 
         whenNotPaused
@@ -90,6 +107,13 @@ contract AuctionAction is AuctionBase, Pausable {
         emit AuctionBidderSelected(_auctionId, _applicantId);
     }
     
+    /**
+     * @dev Extend application term
+     * @dev If within application term, simply extend. If out of application term, restart application term
+     * @dev Reverts if auction is not application stage
+     * @param _auctionId application id
+     * @param _duration extension time
+     */
     function extendApplicationEnd(uint256 _auctionId, uint64 _duration)
         external
         whenNotPaused
@@ -113,7 +137,11 @@ contract AuctionAction is AuctionBase, Pausable {
         emit AuctionApplicationEnd(_auctionId, applicantEndTime);
     }
         
-    
+    /**
+     * @dev Cancel auction. Only possible within application term.
+     * @dev Reverts if auction is not application stage
+     * @param _auctionId application id
+     */
     function cancelAuction(uint256 _auctionId)
         external
         whenNotPaused
@@ -131,6 +159,14 @@ contract AuctionAction is AuctionBase, Pausable {
         emit AuctionCanceled(_auctionId);
     }
     
+    /**
+     * @dev Start bidding stage
+     * @dev Reverts if auction is not application stage or within application term.
+     * @dev Reverts if bidders don't exist
+     * @dev Reverts if duration is under 'MIN_AUCTION_DURATION'
+     * @param _auctionId application id
+     * @param _duration bidding term
+     */
     function biddingStart(uint256 _auctionId, uint64 _duration) 
         external
         whenNotPaused
@@ -151,7 +187,15 @@ contract AuctionAction is AuctionBase, Pausable {
         emit AuctionBiddingStarted(_auctionId, biddingEndTime);
     }
         
-    
+    /**
+     * @dev Bid to auction
+     * @dev If bidder have still be bidded, just add amount.
+     * @dev Reverts if auction is not bidding stage or out of bidding term
+     * @dev Reverts if user is not bidder
+     * @dev Reverts if user don't hold more than bidded token
+     * @param _auctionId application id
+     * @param _amount bidded amount
+     */
     function bid(uint256 _auctionId, uint128 _amount) 
         external 
         whenNotPaused
@@ -178,47 +222,13 @@ contract AuctionAction is AuctionBase, Pausable {
         emit AuctionBidded(_auctionId, bidder, _amount, auction.amount[bidder]);
     }
     
-    
-    // function extendBiddingEnd(uint256 _auctionId, uint64 _duration)
-    //     external
-    //     whenNotPaused
-    //     auctionExistAndAtStage(_auctionId, Stages.Bidding)
-    //     isSeller(_auctionId)
-    // {
-    //     require(_duration != 0, DURATION_IS_0);
-        
-    //     uint64 biddingEndTime = idToAuction[_auctionId].biddingEndTime;
-        
-    //     if (biddingEndTime > uint64(now)) {
-    //         biddingEndTime += _duration;
-    //     } else {
-    //         biddingEndTime = uint64(now) + _duration;
-    //     }
-        
-    //     idToAuction[_auctionId].biddingEndTime = biddingEndTime;
-        
-    //     assert(idToAuction[_auctionId].biddingEndTime == biddingEndTime);
-        
-    //     emit AuctionBiddingEnd(_auctionId, biddingEndTime);
-    // }
-
-    // function approveIssue(uint256 _auctionId) 
-    //     external
-    //     whenNotPaused
-    //     auctionExistAndAtStage(_auctionId, Stages.WinnerChoosen)
-    // {
-    //     uint256 userId = userContract.getUserIdIfExist(msg.sender);
-    //     require(idToAuction[_auctionId].winner == userId, ONLY_WINNER);
-    //     require(!idToAuction[_auctionId].winnerApproveIssue, ALREADY_APPROVED);
-        
-    //     idToAuction[_auctionId].winnerApproveIssue = true;
-    //     assert(idToAuction[_auctionId].winnerApproveIssue);
-        
-    //     emit AuctionIssueApproved(_auctionId, userId);
-    // }
-
-    // ------
-    
+    /**
+     * @dev Select winner
+     * @dev Reverts if auction is not bidding stage
+     * @dev Reverts if winner is not bidder
+     * @param _auctionId application id
+     * @param _winner bidder id
+     */
     function selectWinner(uint256 _auctionId, uint256 _winner) 
         external 
         whenNotPaused
@@ -235,25 +245,17 @@ contract AuctionAction is AuctionBase, Pausable {
         auction.escrowedERC20[auction.seller] = auction.amount[_winner];
         auction.escrowedERC20[_winner] = 0;
         
-        // uint256[] storage bidders = auction.bidders;
-        // uint128 oldAmount = userIdToEscrowedERC20[_winner];
-        
-        // for (uint i = 0; i < bidders.length; i++) {
-        //     if (auction.amount[bidders[i]] == 0) continue;
-            
-        //     if (bidders[i] == _winner) {
-        //         withdrawERC20(msg.sender, auction.amount[_winner] , _winner);
-        //     } else {
-        //         withdrawERC20(userIdToAddress[bidders[i]], auction.amount[bidders[i]] , bidders[i]);
-        //     }
-        // }
-        
         assert(auction.winner == _winner);
-        // assert(userIdToEscrowedERC20[_winner] == oldAmount - idToAuction[_auctionId].amount[_winner]);
         
         emit AuctionWinnerChoosen(_auctionId, _winner);
     }
 
+    /**
+     * @dev Withdraw bidded amount for loser or seller
+     * @dev Reverts if auction is not winner choosen stage
+     * @dev Reverts if already withdrawn
+     * @param _auctionId application id
+     */
     function withdrawERC20(uint256 _auctionId) 
         external 
         whenNotPaused
@@ -269,41 +271,11 @@ contract AuctionAction is AuctionBase, Pausable {
         erc20.transfer(msg.sender, amount);
     }
     
-    // function issueERC721Token(uint256 _auctionId)
-    //     external
-    //     whenNotPaused
-    //     auctionExistAndAtStage(_auctionId, Stages.WinnerChoosen)
-    //     isSeller(_auctionId)
-    //     returns(uint256)
-    // {
-    //     idToAuction[_auctionId].stage = Stages.ERC721TokenIssued;
-        
-    //     uint256 newTokenId = marriages.length + MARRIAGE_TOKEN_ID_OFFSET;
-        
-    //     Marriage memory mariage = Marriage({
-    //         id: newTokenId,
-    //         seller: idToAuction[_auctionId].seller,
-    //         winner: idToAuction[_auctionId].winner
-    //     });
-        
-    //     marriages.push(mariage);
-        
-    //     mintERC721(msg.sender, newTokenId);
-        
-    //     assert(getMarriageTokenIfExist(newTokenId).id == newTokenId);
-        
-    //     emit AuctionERC721TokenIssued(_auctionId, newTokenId);
-        
-    //     return newTokenId;
-    // }
-
-    // // -----
-    
-    // /*
-    //  Kill this smart contract.
-    // */
-    // function kill () onlyOwner whenPaused public {
-    //     selfdestruct (owner);
-    // }
+    /**
+     * @dev Kill this smart contract.
+     */
+    function kill () onlyOwner whenPaused public {
+        selfdestruct (owner);
+    }
     
 }
